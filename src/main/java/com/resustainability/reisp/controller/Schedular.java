@@ -78,12 +78,7 @@ public class Schedular {
 
 	/**********************************************************************************/	
 	
-	@Scheduled(cron = "${cron.expression.n.blow}")
-	public void noidaData(){	
-		 String json = null;
-		 Noida obj = null;
-		   
-	}
+	
 
 	
 	private String capitalize( String line) {

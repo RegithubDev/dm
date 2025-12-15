@@ -2,11 +2,11 @@ package com.resustainability.reisp.model;
 
 public class User {
 
-	private String user_id,user_name,user_role,version_no,reporting_user_name,last_sync_time,department_name,user_session_id,minutes,sbu_code,project,sbu,gToken,reporting_to,reporting_to_id,profileImg,current_project,id,	last_login_date_time,totalCount,password,email_id,mobile_number,user_name_new,designation_new,email_new,contact_number,totalUers,count,
+	private String user_id,user_name,user_role,version_no,dept,reporting_user_name,last_sync_time,department_name,user_session_id,minutes,sbu_code,project,sbu,gToken,reporting_to,reporting_to_id,profileImg,current_project,id,	last_login_date_time,totalCount,password,email_id,mobile_number,user_name_new,designation_new,email_new,contact_number,totalUers,count,
 	company_code,	project_code,department_code,sub_code,action,	project_name,	status,	created_date,	created_by,	modified_date,	modified_by,all_users,active_users,inActive_users,
 	location_code,	location_name,	company_name,module_id,	module_type,role,p_add,p_view,p_edit,p_approvals,p_reports,p_dashboards,p_auto_email,
 	base_sbu,base_project,base_role,message,sbu_name,end_date,days,hours,last_login,reward_points,idea_base_role,	user_login_time,base_department,	user_logout_time,device_type,device_type_no,
-	module_name,module_url,timePeriod,
+	module_name,module_url,timePeriod,cs,searchEndpoint,indexerName,apiKey,container,
 	centerId
 		      ,centerCode
 		      ,centerName
@@ -36,6 +36,54 @@ public class User {
 		      
 ;
 	
+	public String getCs() {
+		return cs;
+	}
+
+	public void setCs(String cs) {
+		this.cs = cs;
+	}
+
+	public String getSearchEndpoint() {
+		return searchEndpoint;
+	}
+
+	public void setSearchEndpoint(String searchEndpoint) {
+		this.searchEndpoint = searchEndpoint;
+	}
+
+	public String getIndexerName() {
+		return indexerName;
+	}
+
+	public void setIndexerName(String indexerName) {
+		this.indexerName = indexerName;
+	}
+
+	public String getApiKey() {
+		return apiKey;
+	}
+
+	public void setApiKey(String apiKey) {
+		this.apiKey = apiKey;
+	}
+
+	public String getContainer() {
+		return container;
+	}
+
+	public void setContainer(String container) {
+		this.container = container;
+	}
+
+	public String getDept() {
+		return dept;
+	}
+
+	public void setDept(String dept) {
+		this.dept = dept;
+	}
+
 	public String getTime_difference() {
 		return time_difference;
 	}

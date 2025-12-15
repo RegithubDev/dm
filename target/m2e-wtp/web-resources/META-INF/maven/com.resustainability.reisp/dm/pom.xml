@@ -2,13 +2,15 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.resustainability.reisp</groupId>
-  <artifactId>dm</artifactId>
+  <artifactId>dm</artifactId> 
   <version>0.0.1-SNAPSHOT</version>
   <packaging>war</packaging>
   <name>dm</name>
   <url>http://maven.apache.org</url>
   
     <properties>
+    	<maven.compiler.source>17</maven.compiler.source>
+  		<maven.compiler.target>17</maven.compiler.target>
 	  <!-- <spring.version>4.2.0.RELEASE</spring.version> -->
 	  <spring.version>4.2.0.RELEASE</spring.version>
 	  <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -33,6 +35,12 @@
     <artifactId>tika-core</artifactId>
     <version>3.1.0</version>
 </dependency>
+<dependency>
+    <groupId>com.azure.resourcemanager</groupId>
+    <artifactId>azure-resourcemanager-storage</artifactId>
+    <version>2.30.0</version>
+</dependency>
+
 <!-- https://mvnrepository.com/artifact/org.apache.tika/tika-parsers-standard -->
 <dependency>
     <groupId>org.apache.tika</groupId>
@@ -313,23 +321,30 @@
 	    <artifactId>gson</artifactId>
 	    <version>2.8.4</version>
 	</dependency>
-	  <dependency>
-        <groupId>org.springframework.security.extensions</groupId>
-        <artifactId>spring-security-saml2-core</artifactId>
-        <version>1.0.0.RC2</version>
-    </dependency>
+	<!-- https://mvnrepository.com/artifact/org.springframework.security.extensions/spring-security-saml2-core -->
+<dependency>
+    <groupId>org.springframework.security.extensions</groupId>
+    <artifactId>spring-security-saml2-core</artifactId>
+    <version>1.0.10.RELEASE</version>
+</dependency>
      <dependency>
       <groupId>com.onelogin</groupId>
       <artifactId>java-saml</artifactId>
       <version>2.9.0</version>
   </dependency>
-    
+    <dependency>
+  <groupId>org.opensaml</groupId>
+  <artifactId>opensaml-core</artifactId>
+  <version>4.2.0</version>
+</dependency>
+
   </dependencies>
   <repositories>
     <repository>
         <id>spring-milestones</id>
         <name>Spring Milestones</name>
-        <url>http://repo.spring.io/milestone</url>
+    <url>https://build.shibboleth.net/nexus/content/repositories/releases/</url>
+
         <snapshots>
             <enabled>false</enabled>
         </snapshots>
@@ -342,10 +357,10 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.8.1</version>
         <configuration>
-          <release>18</release>
+          <release>17</release>
           	<warName>dm</warName>
                 <!-- <outputDirectory>D:\jboss-as-7.1.1.Final\standalone\deployments</outputDirectory> -->
-                <outputDirectory>E:\Development\apache-tomcat-9.0.43\webapps</outputDirectory>
+                <outputDirectory>C:\Program Files\Apache Software Foundation\Tomcat 8.5\webapps</outputDirectory>
         </configuration>
       </plugin>
         <plugin>

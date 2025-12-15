@@ -457,7 +457,7 @@ public class UserDao {
 		try{  
 			con = dataSource.getConnection();
 			String qry = "select userId,"
-					+ "		      userName,centerId,"
+					+ "		      userName,centerId,dept,"
 					+ "		      roleTypeId,"
 					+ "		      isActive,"
 					+ "		      emailId,"
@@ -465,7 +465,11 @@ public class UserDao {
 					+ "		      createdBy,"
 					+ "		      createdDate,"
 					+ "		      modifiedBy,"
-					+ "		      modifiedDate from [AIDB].[dbo].[User] where userId is  not null ";
+					+ "		      modifiedDate,cs"
+					+ "      ,searchEndpoint"
+					+ "      ,indexerName"
+					+ "      ,apiKey"
+					+ "      ,container from [AIDB].[dbo].[User] where userId is  not null ";
 			if(!StringUtils.isEmpty(user.getUserId()) && !StringUtils.isEmpty(user.getPassword())){
 				qry = qry + "AND userName = ? and Password = ?  "; 
 			}
@@ -485,6 +489,7 @@ public class UserDao {
 				userDetails = new User();
 			        userDetails.setUserId(rs.getString("userId"));
 			        userDetails.setUserName(rs.getString("userName"));
+			        userDetails.setDept(rs.getString("dept"));
 			        userDetails.setCenterId(rs.getString("centerId"));
 			        userDetails.setRoleTypeId(rs.getString("roleTypeId"));
 			        userDetails.setIsActive(rs.getString("isActive"));
@@ -494,6 +499,12 @@ public class UserDao {
 			        userDetails.setCreatedDate(rs.getString("createdDate"));
 			        userDetails.setModifiedBy(rs.getString("modifiedBy"));
 			        userDetails.setModifiedDate(rs.getString("modifiedDate"));
+			        
+			        userDetails.setCs(rs.getString("cs"));
+			        userDetails.setSearchEndpoint(rs.getString("searchEndpoint"));
+			        userDetails.setIndexerName(rs.getString("indexerName"));
+			        userDetails.setApiKey(rs.getString("apiKey"));
+			        userDetails.setContainer(rs.getString("container"));
 			}
 		}catch(Exception e){ 
 			throw new SQLException(e.getMessage());

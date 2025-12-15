@@ -19,6 +19,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -167,9 +168,18 @@ public class LoginController {
 						session.setAttribute("user", userDetails);
 						session.setAttribute("UserId", userDetails.getUserId());
 						session.setAttribute("USER_NAME", userDetails.getUserName());
+						session.setAttribute("DEPT", userDetails.getDept());
 						session.setAttribute("DisplayName", userDetails.getDisplayName());
 						session.setAttribute("EmailId", userDetails.getEmailId());
+						
+						session.setAttribute("mobileNo", userDetails.getMobileNo());
+						
 						session.setAttribute("RoleTypeId", userDetails.getRoleTypeId());
+						session.setAttribute("CS", userDetails.getCs());
+						session.setAttribute("searchEndpoint", userDetails.getSearchEndpoint());
+						session.setAttribute("indexerName", userDetails.getIndexerName());
+						session.setAttribute("apiKey", userDetails.getApiKey());
+						session.setAttribute("container", userDetails.getContainer());
 						attributes.addFlashAttribute("welcome", "welcome "+userDetails.getUserName());
 					
 				}else {
@@ -188,7 +198,10 @@ public class LoginController {
 	public ModelAndView user(@ModelAttribute User user, HttpSession session) {
 	    ModelAndView model = new ModelAndView("home");
 	    try {
-	        Map<String, List<String>> blobData = azureBlobService.getAllContainersAndFiles();
+	    	String cs = (String) session.getAttribute("CS"); // connection string
+	       //Map<String, List<String>> blobData = azureBlobService.getAllContainersAndFiles();
+	      Map<String, Map<String, Object>> blobData = azureBlobService.getAllContainersAndFiles(cs);
+
 	        model.addObject("blobData", blobData);
 	    } catch (Exception e) {
 	        e.printStackTrace();
@@ -205,268 +218,48 @@ public class LoginController {
 	    }
 	 List<PreviousQA> historyList = new ArrayList<>();
 
-	@RequestMapping(value = "/askAI", method = {RequestMethod.POST, RequestMethod.GET})
-	@ResponseBody
-	public String askAI(@RequestParam("question") String question, @RequestParam("deploy") String deploy) {
-	    try {
-	    	// Your existing variables
-	    	String endpoint = "https://openairesl.openai.azure.com/openai/deployments/" + deploy + "/chat/completions?api-version=2025-01-01-preview";
-	    	String apiKey = "2WIpHXdCrn8tQMRtaaYLqJBXYgcf9bCOWUX3u7CcL1YGTssMFxBRJQQJ99BDACYeBjFXJ3w3AAABACOG9brY";
-
-	    	String searchEndpoint = "https://openairesl.search.windows.net";
-	    	String searchIndex = "openai";
-	    	String searchKey = "KPqzHD0JWe2zJG3sbmAPITGGGCM0z5QMmSmcf74ZvtAzSeChMcwk";
-
-	    	// Prepare the messages list
-	    	List<JSONObject> messages = new ArrayList<>();
-
-	    	// Add system prompt (added only once)
-	    	JSONObject systemPrompt = new JSONObject();
-	    	systemPrompt.put("role", "system");
-	    	systemPrompt.put("content", "You are a helpful assistant. Use your general knowledge to answer the user's question.");
-	    	messages.add(systemPrompt);
-
-	    	// Add previous history (loop over the history list and add user and assistant messages)
-	    	for (PreviousQA qa : historyList) {
-	    	    // Add user's previous question
-	    	    JSONObject userMsg = new JSONObject();
-	    	    userMsg.put("role", "user");
-	    	    userMsg.put("content", qa.getQuestion());
-	    	    messages.add(userMsg);
-
-	    	    // Add assistant's previous answer
-	    	    JSONObject assistantMsg = new JSONObject();
-	    	    assistantMsg.put("role", "assistant");
-	    	    assistantMsg.put("content", qa.getAnswer());
-	    	    messages.add(assistantMsg);
-	    	}
-
-	    	// Add the new user question (current question)
-	    	JSONObject newUserMessage = new JSONObject();
-	    	newUserMessage.put("role", "user");
-	    	newUserMessage.put("content", question);  // assuming `question` is the new user's input
-	    	messages.add(newUserMessage);
-
-	    	// Safely escape the question
-	    	String safeQuestion = JSONObject.quote(question);
-
-	    	// Conditional retrieval tool for GPT-4
-	    	String retrievalTool = "";
-	    	if ("gpt-4".equalsIgnoreCase(deploy)) {
-	    	    retrievalTool = """
-	    	      "tools": [
-	    	        { "type": "retrieval" }
-	    	      ],
-	    	      "tool_choice": "auto",
-	    	    """;
-	    	}
-
-	    	// Build JSON request body
-	    	String requestBody = String.format("""
-	    	{
-	    	  "messages": %s,
-	    	  %s
-	    	  "temperature": 1,
-	    	  "max_tokens": 4096,
-	    	  "top_p": 1,
-	    	  "frequency_penalty": 0,
-	    	  "presence_penalty": 0,
-	    	  "data_sources": [
-	    	    {
-	    	      "type": "azure_search",
-	    	      "parameters": {
-	    	        "endpoint": "%s",
-	    	        "index_name": "%s",
-	    	        "top_n_documents": 5,
-	    	        "authentication": {
-	    	          "type": "api_key",
-	    	          "key": "%s"
-	    	        }
-	    	      }
-	    	    }
-	    	  ]
-	    	}
-	    	""", messages.toString(), retrievalTool, searchEndpoint, searchIndex, searchKey);
-
-	    	// Send HTTP Request
-	    	HttpClient client = HttpClient.newHttpClient();
-	    	HttpRequest request = HttpRequest.newBuilder()
-	    	    .uri(URI.create(endpoint))
-	    	    .header("Content-Type", "application/json")
-	    	    .header("api-key", apiKey)
-	    	    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-	    	    .build();
-
-	    	HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-	        // === Handle API Errors ===
-	        if (response.statusCode() != 200) {
-	            throw new RuntimeException("Azure OpenAI call failed: " + response.statusCode() + " - " + response.body());
-	        }
-
-	        // === Parse Response ===
-	        JSONObject json = new JSONObject(response.body());
-	        String content = json.getJSONArray("choices")
-	                             .getJSONObject(0)
-	                             .getJSONObject("message")
-	                             .getString("content")
-	                             .trim();
-
-	        // === Replace doc references like [doc1], [doc2] with URLs ===
-	        List<String> docRefs = extractDocReferences(content); // [doc1], [doc2], etc.
-	        List<String> replacements = new ArrayList<>();
-
-	        JSONObject context = json.getJSONArray("choices")
-	                                 .getJSONObject(0)
-	                                 .getJSONObject("message")
-	                                 .optJSONObject("context");
-	        if (context != null && context.has("citations")) {
-	            JSONArray citations = context.getJSONArray("citations");
-
-	            for (int i = 0; i < citations.length(); i++) {
-	                JSONObject citation = citations.getJSONObject(i);
-	                String title = citation.optString("title", "Document");
-	                String url = citation.optString("url", "");
-	                replacements.add("{*" + url + "*}");
-	            }
-	        }
-
-	        // 4. Replace [doc2], [doc3]... in order
-	        for (int i = 0; i < docRefs.size() && i < replacements.size(); i++) {
-	            content = content.replace("[" + docRefs.get(i) + "]", replacements.get(i));
-	        }
-
-	        // === Optional: Clean prefix formatting ===
-	        if (content.startsWith("### Answer:")) {
-	            content = content.replaceFirst("### Answer:\\s*", "");
-	        }
-
-	        return content;
-
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        return "I'm afraid I can't assist with that request.";
-	    }
-	}
-
-	@RequestMapping(value = "/generateBlobUrl", method = RequestMethod.POST)
-	public ResponseEntity<String> generateBlobUrl(@RequestParam String filename) {
-	    String connectionString = "DefaultEndpointsProtocol=https;AccountName=openairesl;AccountKey=DEOT0qQJY3BBofHFoGCADnsawejibL/LRBhrTbTu15crBK3sldnFMUkHftmqRjueVVG8rhOEyP45+AStduHW4A==;EndpointSuffix=core.windows.net";
-	    BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
-	        .connectionString(connectionString)
-	        .buildClient();
-
-	    BlobClient blobClient = blobServiceClient.getBlobContainerClient("hrms").getBlobClient(filename);
-
-	    BlobServiceSasSignatureValues values = new BlobServiceSasSignatureValues(
-	        OffsetDateTime.now().plusMinutes(30),
-	        BlobSasPermission.parse("r") // read-only
-	    );
-
-	    String sasUrl = blobClient.getBlobUrl() + "?" + blobClient.generateSas(values);
-	    return ResponseEntity.ok(sasUrl);
-	}
-
-
-	@RequestMapping(value = "/createContainer", method = RequestMethod.POST)
-	@ResponseBody
-	public ModelAndView createContainer(@RequestParam("containerName") String containerName) {
-		   ModelAndView model = new ModelAndView();
-		   model.setViewName("redirect:/home");
-	    try {
-	        azureBlobService.createContainer(containerName.toLowerCase()); // container names must be lowercase
-	        return model;
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        return model;
-	    }
-	}
-	@RequestMapping(value = "/deleteContainer", method = RequestMethod.POST)
-	@ResponseBody
-	public ModelAndView deleteContainer(@RequestParam("containerName") String containerName) {
-		 ModelAndView model = new ModelAndView();
-		   model.setViewName("redirect:/home");
-	    try {
-	        azureBlobService.deleteContainer(containerName.toLowerCase());
-	        return model;
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        return model;
-	    }
-	}
 
 	@RequestMapping(value = "/uploadFile", method = RequestMethod.POST)
 	@ResponseBody
-	public ModelAndView uploadFile(@RequestParam("containerName") String containerName,
-	                         @RequestParam("file") MultipartFile file,HttpSession session) {
-		 ModelAndView model = new ModelAndView();
-		   model.setViewName("redirect:/home");
-		   String userId = null;
-		   BrainBox obj = null;
-			String userName = null;
-			userName = (String) session.getAttribute("USER_NAME");
-			String fileName = file.getOriginalFilename();
-			String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy, h:mm a"));
+	public ModelAndView uploadFile(
+	        @RequestParam("containerName") String containerName,
+	        @RequestParam("files") List<MultipartFile> files,
+	        HttpSession session) {
 
-			String htmlBody = "<!DOCTYPE html>\n" +
-					"<html>\n" +
-					"<head>\n" +
-					"  <meta charset=\"UTF-8\">\n" +
-					"  <style>\n" +
-					"    body { font-family: Arial, sans-serif; background-color: #f4f7f9; margin: 0; padding: 0; }\n" +
-					"    .email-container { max-width: 600px; margin: auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }\n" +
-					"    .white{color : white; }\n" +
-					"    .header { background-color: #0078d4; color: white; text-align: center; padding: 20px; }\n" +
-					"    .header img { height: 50px; margin-bottom: 10px; }\n" +
-					"    .content { padding: 20px; }\n" +
-					"    .content h2 { color: #333; }\n" +
-					"    .content p { font-size: 15px; color: #555; }\n" +
-					"    .footer { background-color: #f0f0f0; padding: 15px; text-align: center; font-size: 12px; color: #888; }\n" +
-					"    .btn { display: inline-block; margin-top: 15px; padding: 10px 20px; background-color:white ; color: white; text-decoration: none; border-radius: 4px; }\n" +
-					"  </style>\n" +
-					"</head>\n" +
-					"<body>\n" +
-					"  <div class=\"email-container\">\n" +
-					"    <div class=\"header\">\n" +
-					"      <h2>📥 Document Upload Request</h2>\n" +
-					"    </div>\n" +
-					"    <div class=\"content\">\n" +
-					"      <p><strong>User:</strong> " + userName.toUpperCase() + "</p>\n" +
-					"      <p><strong>Container:</strong> " + containerName + "</p>\n" +
-					"      <p><strong>File:</strong> " + fileName + "</p>\n" +
-					"      <p><strong>Timestamp:</strong> " +timestamp + "</p>\n" +
-					"      <hr style='border:none;border-top:1px solid #ddd;margin:20px 0;'>\n" +
-					"      <p><strong>' " + userName.toUpperCase() + " '</strong> has requested a document upload and seeks your review of the submission.</p>\n" +
-					"      <p>Please, reconnect the integration via the Azure portal.</p>\n" +
-					"      <p>Please verify the configuration and take the necessary action.</p>\n" +
-					"      <p>Regards,<br/>ReAI Assistant Notification Service</p>\n" +
-					"      <a href=\"https://appmint.resustainability.com/dm/home\" class=\"btn \">Go to Dashboard</a>\n" +
-					"    </div>\n" +
-					"    <div class=\"footer\">\n" +
-					"      This is an automated alert from your ReAI Assistant system.\n" +
-					"    </div>\n" +
-					"  </div>\n" +
-					"</body>\n" +
-					"</html>";
+	    ModelAndView model = new ModelAndView();
+	    model.setViewName("redirect:/home");
 
+	    String userName = (String) session.getAttribute("USER_NAME");
+	    BrainBox obj = null;
 
-			try {
-			
-	        azureBlobService.uploadFile(containerName.toLowerCase(), file);
-	        EMailSender email = new EMailSender();
-	        email.send("saidileep.p@resustainability.com", "📎 Document Upload Request Alert!\r\n"+ "", htmlBody, obj, "Re AI Document Upload Request!");
-	        return model;
+	    try {
+	        for (MultipartFile file : files) {
+	            if (file == null || file.isEmpty()) continue;
+
+	            String fileName = file.getOriginalFilename();
+	            String timestamp = LocalDateTime.now()
+	                    .format(DateTimeFormatter.ofPattern("MMMM d, yyyy, h:mm a"));
+	            String cs = (String) session.getAttribute("CS"); // connection string
+	            // Upload each file
+	            azureBlobService.uploadFile(containerName.toLowerCase(), file,cs);
+	        }
+
 	    } catch (Exception e) {
 	        e.printStackTrace();
-	        return model;
+	        model.addObject("error", "Failed to upload one or more files: " + e.getMessage());
 	    }
+
+	    return model;
 	}
+
 	@RequestMapping(value = "/deleteFile", method = RequestMethod.POST)
 	@ResponseBody
 	public ResponseEntity<String> deleteFile(@RequestParam("containerName") String containerName,
-	                                         @RequestParam("fileName") String fileName) {
+	                                         @RequestParam("fileName") String fileName,HttpSession session) {
 	    try {
-	        azureBlobService.deleteFile(containerName.toLowerCase(), fileName);
+            String cs = (String) session.getAttribute("CS"); // connection string
+
+	        azureBlobService.deleteFile(containerName.toLowerCase(), fileName,cs);
 	        return ResponseEntity.ok("File deleted successfully");
 	    } catch (Exception e) {
 	        e.printStackTrace();
@@ -507,5 +300,47 @@ public class LoginController {
 		return model;
 	}
 	
+	@RequestMapping(value = "/refreshIndex", method = RequestMethod.POST, produces = "text/plain;charset=UTF-8")
+	@ResponseBody
+	public String runAzureSearchIndexer( HttpSession session) {
+	    try {
+	     
+	        String cs = null;
+	        String searchEndpoint = null;
+	        String indexerName = null;
+	        String apiKey = null;
+	        String container = null;
+
+	        // Retrieve stored values from session
+	        cs = (String) session.getAttribute("CS"); // connection string
+	        searchEndpoint = (String) session.getAttribute("searchEndpoint");
+	        indexerName = (String) session.getAttribute("indexerName");
+	        apiKey = (String) session.getAttribute("apiKey");
+	        container = (String) session.getAttribute("container");
+	        // ✅ Send an empty JSON body to avoid 411 error
+	        HttpRequest request = HttpRequest.newBuilder()
+	            .uri(URI.create(searchEndpoint + "/indexers/" + indexerName + "/run?api-version=2023-11-01"))
+	            .header("Content-Type", "application/json")
+	            .header("api-key", apiKey)
+	            .POST(HttpRequest.BodyPublishers.ofString("{}"))
+	            .build();
+
+	        HttpResponse<String> response = HttpClient.newHttpClient()
+	            .send(request, HttpResponse.BodyHandlers.ofString());
+
+	        if (response.statusCode() >= 300) {
+	            System.err.println("❌ Failed to run indexer: " + response.body());
+	            return "❌ Failed to refresh indexer: " + response.body();
+	        }
+
+	        System.out.println("✅ Indexer run triggered successfully.");
+	        return "✅ The indexer '" + indexerName + "' has been successfully triggered. Please allow approximately 2 minutes for AI to analyze your document.";
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return "❌ Failed to refresh indexer: " + e.getMessage();
+	    }
+	}
+
+
 
 }
